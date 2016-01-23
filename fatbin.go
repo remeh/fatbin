@@ -14,7 +14,34 @@ type Fatbin struct {
 	Directory  Directory `json:"dir"`
 }
 
-func CreateFatbin(directory Directory, executable string) (Fatbin, *os.File, error) {
+func RunFatbin(filename string) error {
+	// create a tmp directory where everything will go
+	dir, err := ioutil.TempDir("", "fatbin")
+	if err != nil {
+		return err
+	}
+
+	if _, err := readFatbin(filename, dir); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func readFatbin(filename, dstDir string) (Fatbin, error) {
+	rv := Fatbin{}
+
+	src, err := os.Open(filename)
+	if err != nil {
+		return rv, err
+	}
+
+	return Parse(src, dstDir)
+}
+
+// TODO(remy): finish this method
+// TODO(remy): should we close the file here or outside ?
+func BuildFatbin(directory Directory, executable string) (Fatbin, *os.File, error) {
 	rv := Fatbin{}
 
 	// look for the executable in the tree
@@ -40,17 +67,19 @@ func CreateFatbin(directory Directory, executable string) (Fatbin, *os.File, err
 		return rv, nil, err
 	}
 
+	f.Write(TOKEN_HEADER_START)
 	f.Write(headers)
 	f.Write([]byte("\n"))
+	f.Write(TOKEN_HEADER_END)
 
-	f.Write([]byte("<fatbin-data>\n"))
+	f.Write(TOKEN_DATA_START)
 
 	// write each files
 	if err := write(fatbin, f); err != nil {
 		return fatbin, f, err
 	}
 
-	f.Write([]byte("</fatbin-data>\n"))
+	f.Write(TOKEN_DATA_END)
 
 	return rv, f, nil
 }
@@ -76,16 +105,16 @@ func writeDirectory(dir Directory, dst *os.File) error {
 }
 
 func writeFile(info FileInfo, dst *os.File) error {
-	dst.Write([]byte("<fatbin-file>\n"))
-	dst.Write([]byte("<fatbin-file-header>\n"))
+	dst.Write(TOKEN_FILE_START)
+	dst.Write(TOKEN_FILE_HEADER_START)
 	data, err := json.Marshal(info)
 	if err != nil {
 		return err
 	}
 	dst.Write(data)
 	dst.Write([]byte("\n"))
-	dst.Write([]byte("</fatbin-file-header>\n"))
-	dst.Write([]byte("<fatbin-file-data>\n"))
+	dst.Write(TOKEN_FILE_HEADER_END)
+	dst.Write(TOKEN_FILE_DATA_START)
 	f, err := os.Open(flags.Directory + info.Name)
 	if err != nil {
 		return err
@@ -94,9 +123,21 @@ func writeFile(info FileInfo, dst *os.File) error {
 		return err
 	}
 	dst.Write([]byte("\n"))
-	dst.Write([]byte("</fatbin-file-data>\n"))
-	dst.Write([]byte("</fatbin-file>\n"))
+	dst.Write(TOKEN_FILE_DATA_END)
+	dst.Write(TOKEN_FILE_END)
 	return nil
+}
+
+func extractFile(dstDir string, fileInfo FileInfo, data []byte) error {
+	file, err := os.Open(dstDir + fileInfo.Name)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	_, err = file.Write(data)
+	return err
 }
 
 /*

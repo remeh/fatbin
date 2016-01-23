@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 )
 
 func main() {
@@ -15,24 +16,45 @@ func main() {
 		return
 	}
 
+	// compress mode
 	if len(flags.Directory) > 0 && len(flags.Executable) > 0 {
-		// compress mode
-		tree, err := BuildTree(flags.Directory)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		_, file, err := CreateFatbin(tree, flags.Executable)
-		if file != nil {
-			defer file.Close()
-		}
-
-		if err != nil {
-			fmt.Println(err)
-		}
-	} else {
-		// run mode
-		println("run mode")
+		build()
+		return
 	}
+
+	run()
+}
+
+func run() {
+	var run string
+	if len(os.Args) == 1 {
+		run = "archive.fbin"
+	} else if len(os.Args) > 1 {
+		run = os.Args[1]
+	}
+
+	if err := RunFatbin(run); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func build() {
+	tree, err := BuildTree(flags.Directory)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	_, file, err := BuildFatbin(tree, flags.Executable)
+	if file != nil {
+		defer file.Close()
+	}
+
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	// TODO(finish):
 }
