@@ -10,7 +10,9 @@ type Flags struct {
 	Executable string // the file to start on execution of the fatbin
 }
 
-func parseFlags() (Flags, error) {
+var flags Flags
+
+func parseFlags() error {
 	var dir, exec string
 
 	flag.StringVar(&dir, "dir", "", "the directory to fatbinerize")
@@ -18,18 +20,19 @@ func parseFlags() (Flags, error) {
 
 	flag.Parse()
 
-	flags := Flags{
+	f := Flags{
 		Directory:  dir,
 		Executable: exec,
 	}
 
 	if len(dir) == 0 {
-		return flags, fmt.Errorf("You must provide a directory. See flag -dir")
+		return fmt.Errorf("You must provide a directory. See flag -dir")
 	}
 
 	if len(exec) == 0 {
-		return flags, fmt.Errorf("You must provide an executable to run. See flag -exec")
+		return fmt.Errorf("You must provide an executable to run. See flag -exec")
 	}
 
-	return flags, nil
+	flags = f
+	return nil
 }
