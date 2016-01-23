@@ -150,14 +150,11 @@ func readFiles(reader *bufio.Reader, dstDir string) error {
 				return err
 			}
 
-			fmt.Printf("End of file : %s\n", fileInfo.Name)
-
 			parserState = string(TOKEN_FILE_END)
 
 		// this file is finished, we will either met a start of
 		// a new file or the end of the parsing
 		case string(TOKEN_FILE_END):
-			println("we're here")
 			line, err := nextLine(reader)
 			if err != nil {
 				return unexpectedParsingError(err)
