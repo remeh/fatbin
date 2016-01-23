@@ -39,6 +39,7 @@ func RunFatbin(filename string) error {
 
 		// execute the binary
 		cmd := exec.Command(dir + "/" + fatbin.Executable)
+		cmd.Dir = dir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
