@@ -14,4 +14,5 @@ func main() {
 		flag.PrintDefaults()
 	}
 
+	BuildTree(flags.Directory)
 }
