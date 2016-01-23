@@ -7,10 +7,18 @@ import (
 )
 
 type Directory struct {
-	Name        string               // directory path
-	Files       map[string]FileInfo  // files contained inside the directory
-	Directories map[string]Directory // sub-directories
-	Perm        string               // TODO(remy): permission
+	Name        string               `json:"name"`        // relative directory path
+	Files       map[string]FileInfo  `json:"files"`       // files contained inside the directory
+	Directories map[string]Directory `json:"directories"` // sub-directories
+	Perm        string               `json:"perm"`        // TODO(remy): permission
+}
+
+// File is a file on the FS which is embedded
+// in the Fatbin. It'll be extracted before
+// launch.
+type FileInfo struct {
+	Name string `json:"name"` // file name
+	Perm string `json:"perm"` // TODO(remy): permission
 }
 
 func (d Directory) print() {
@@ -22,14 +30,6 @@ func (d Directory) print() {
 	for _, subdir := range d.Directories {
 		subdir.print()
 	}
-}
-
-// File is a file on the FS which is embedded
-// in the Fatbin. It'll be extracted before
-// launch.
-type FileInfo struct {
-	Name string // file name
-	Perm string // TODO(remy): permission
 }
 
 func BuildTree(path string) (Directory, error) {
@@ -81,7 +81,7 @@ func parseDirectory(path string) (Directory, error) {
 			rv.Directories[relative(dir.Name)] = dir
 		} else {
 			rv.Files[file.Name()] = FileInfo{
-				Name: relative(file.Name()),
+				Name: relative(path) + file.Name(),
 			}
 		}
 	}
