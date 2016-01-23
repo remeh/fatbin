@@ -8,11 +8,17 @@ import (
 func main() {
 	// read the flags
 
-	flags, err := parseFlags()
+	err := parseFlags()
 	if err != nil {
 		fmt.Println(err)
 		flag.PrintDefaults()
 	}
 
-	BuildTree(flags.Directory)
+	tree, err := BuildTree(flags.Directory)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	tree.print()
 }

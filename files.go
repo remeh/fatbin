@@ -7,10 +7,21 @@ import (
 )
 
 type Directory struct {
-	Name        string      // directory path
-	Files       []FileInfo  // files contained inside the directory
-	Directories []Directory // sub-directories
-	Perm        string      // TODO(remy): permission
+	Name        string               // directory path
+	Files       map[string]FileInfo  // files contained inside the directory
+	Directories map[string]Directory // sub-directories
+	Perm        string               // TODO(remy): permission
+}
+
+func (d Directory) print() {
+	fmt.Printf("%s:\n", d.Name)
+	for f := range d.Files {
+		fmt.Printf("- %s\n", f)
+	}
+
+	for _, subdir := range d.Directories {
+		subdir.print()
+	}
 }
 
 // File is a file on the FS which is embedded
@@ -31,9 +42,9 @@ func parseDirectory(path string) (Directory, error) {
 	}
 
 	rv := Directory{
-		Name:        path,
-		Files:       make([]FileInfo, 0),
-		Directories: make([]Directory, 0),
+		Name:        relative(path),
+		Files:       make(map[string]FileInfo, 0),
+		Directories: make(map[string]Directory, 0),
 	}
 
 	d, err := os.Open(path)
@@ -66,14 +77,22 @@ func parseDirectory(path string) (Directory, error) {
 			if err != nil {
 				return rv, nil
 			}
-			rv.Directories = append(rv.Directories, dir)
-			fmt.Printf("Directory: %s\n", subpath)
+
+			rv.Directories[relative(dir.Name)] = dir
 		} else {
-			// embed this file
-			fmt.Printf("To embed: %s\n", file.Name())
+			rv.Files[file.Name()] = FileInfo{
+				Name: relative(file.Name()),
+			}
 		}
 	}
 	// TODO(remy): parse the sub-directories
 
 	return rv, nil
+}
+
+func relative(path string) string {
+	if strings.HasPrefix(path, flags.Directory) {
+		return strings.Replace(path, flags.Directory, "", -1)
+	}
+	return path
 }
