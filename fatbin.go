@@ -129,12 +129,17 @@ func writeFile(info FileInfo, dst *os.File) error {
 }
 
 func extractFile(dstDir string, fileInfo FileInfo, data []byte) error {
-	file, err := os.Open(dstDir + fileInfo.Name)
+	if len(dstDir) == 0 || dstDir == "/" /* avoid a massacre */ {
+		return fmt.Errorf("Error in the dst dir: %s\n", dstDir)
+	}
+	file, err := os.Create(dstDir + fileInfo.Name)
 	if err != nil {
 		return err
 	}
 
 	defer file.Close()
+
+	fmt.Printf("Extracted %s\n", dstDir+fileInfo.Name)
 
 	_, err = file.Write(data)
 	return err

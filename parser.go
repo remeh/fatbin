@@ -140,7 +140,9 @@ func readFiles(reader *bufio.Reader, dstDir string) error {
 				unexpectedParsingError(err)
 			}
 
-			extractFile(dstDir, fileInfo, data)
+			if err := extractFile(dstDir, fileInfo, data); err != nil {
+				return err
+			}
 
 			parserState = string(TOKEN_FILE_DATA_END)
 
