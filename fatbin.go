@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 )
 
 type Fatbin struct {
@@ -21,11 +22,27 @@ func RunFatbin(filename string) error {
 		return err
 	}
 
-	if _, err := readFatbin(filename, dir); err != nil {
+	if fatbin, err := readFatbin(filename, dir); err != nil {
 		return err
-	}
+	} else {
+		defer func() {
+			if len(dir) > 0 && dir != "/" {
+				if err := os.RemoveAll(dir); err != nil {
+					fmt.Println("Can't remove the temporary dir:", err.Error())
+				}
+			}
+		}()
 
-	return nil
+		if err := os.Chmod(dir+"/"+fatbin.Executable, 0755); err != nil {
+			return err
+		}
+
+		// execute the binary
+		cmd := exec.Command(dir + "/" + fatbin.Executable)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
+	}
 }
 
 func readFatbin(filename, dstDir string) (Fatbin, error) {
@@ -128,8 +145,26 @@ func writeFile(info FileInfo, dst *os.File) error {
 	return nil
 }
 
+func createFatbinDirectories(fatbin Fatbin, dstDir string) error {
+	return createDirectories(fatbin.Directory, dstDir)
+}
+
+func createDirectories(directory Directory, dstDir string) error {
+	for _, d := range directory.Directories {
+		println(d.Name)
+		if err := os.MkdirAll(dstDir+d.Name, 0755); err != nil {
+			return err
+		}
+
+		// sub dir
+		createDirectories(d, dstDir+"/")
+	}
+	return nil
+}
+
 func extractFile(dstDir string, fileInfo FileInfo, data []byte) error {
-	if len(dstDir) == 0 || dstDir == "/" /* avoid a massacre */ {
+	// avoid a disaster
+	if len(dstDir) == 0 || dstDir == "/" {
 		return fmt.Errorf("Error in the dst dir: %s\n", dstDir)
 	}
 	file, err := os.Create(dstDir + fileInfo.Name)

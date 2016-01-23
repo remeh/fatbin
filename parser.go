@@ -52,6 +52,12 @@ func Parse(src *os.File, dstDir string) (Fatbin, error) {
 		return rv, err
 	}
 
+	// we're ready to parse the whole fatbin but before, create each needed
+	// directories
+	if err := createFatbinDirectories(rv, dstDir); err != nil {
+		return rv, err
+	}
+
 	// now, we will read files until we met a TOKEN_DATA_END
 	if err := readFiles(reader, dstDir); err != nil {
 		return rv, err
@@ -138,6 +144,12 @@ func readFiles(reader *bufio.Reader, dstDir string) error {
 			data, err := readUntil(reader, TOKEN_FILE_DATA_END)
 			if err != nil {
 				unexpectedParsingError(err)
+			}
+
+			// the last char MUST be a \n (because we wrote it during serialization)
+			// so we remove it here
+			if data[len(data)-1] == '\n' {
+				data = data[:len(data)-1]
 			}
 
 			if err := extractFile(dstDir, fileInfo, data); err != nil {
