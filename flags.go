@@ -9,21 +9,24 @@ import (
 type Flags struct {
 	Directory  string // the directory to "fatbinarize"
 	Executable string // the file to start on execution of the fatbin
+	Output     string // the archive file to create.
 }
 
 var flags Flags
 
 func parseFlags() error {
-	var dir, exe string
+	var dir, exe, out string
 
 	flag.StringVar(&dir, "dir", "", "the directory to fatbinerize")
-	flag.StringVar(&exe, "exe", "", "the file inside the directory to execute at startup")
+	flag.StringVar(&exe, "exe", "", "the file inside the fatbin archive to execute at startup")
+	flag.StringVar(&out, "out", "archive.fbin", "the archive file to create.")
 
 	flag.Parse()
 
 	f := Flags{
 		Directory:  dir,
 		Executable: exe,
+		Output:     out,
 	}
 
 	if len(dir) != 0 {
@@ -34,6 +37,10 @@ func parseFlags() error {
 
 		if len(exe) == 0 {
 			return fmt.Errorf("You must provide an executable when compressing a directory. See flag -exe.")
+		}
+
+		if len(out) == 0 {
+			return fmt.Errorf("The output file can't be empty in creation mode.")
 		}
 	}
 

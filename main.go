@@ -46,12 +46,7 @@ func build() {
 		os.Exit(1)
 	}
 
-	_, file, err := BuildFatbin(tree, flags.Executable)
-	if file != nil {
-		defer file.Close()
-	}
-
-	if err != nil {
+	if _, err := BuildFatbin(tree, flags.Executable); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

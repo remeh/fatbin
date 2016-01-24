@@ -15,7 +15,12 @@ type Fatbin struct {
 	Directory  Directory `json:"dir"`
 }
 
+// RunFatbin starts the given fatbin archive.
 func RunFatbin(filename string) error {
+	if len(filename) == 0 {
+		return fmt.Errorf("Empty filename provided.")
+	}
+
 	// create a tmp directory where everything will go
 	dir, err := ioutil.TempDir("", "fatbin")
 	if err != nil {
@@ -57,21 +62,21 @@ func readFatbin(filename, dstDir string) (Fatbin, error) {
 	return Parse(src, dstDir)
 }
 
-// TODO(remy): finish this method
-// TODO(remy): should we close the file here or outside ?
-func BuildFatbin(directory Directory, executable string) (Fatbin, *os.File, error) {
+func BuildFatbin(directory Directory, executable string) (Fatbin, error) {
 	rv := Fatbin{}
 
 	// look for the executable in the tree
 	if len(directory.Files[executable].Name) == 0 {
-		return rv, nil, fmt.Errorf("Can't find the executable in the root directory.")
+		return rv, fmt.Errorf("Can't find the executable in the root directory.")
 	}
 
 	// open the target file
 	f, err := ioutil.TempFile("", "fatbin")
 	if err != nil {
-		return rv, nil, err
+		return rv, err
 	}
+
+	defer f.Close()
 
 	fatbin := Fatbin{
 		Version:    "1",
@@ -82,7 +87,7 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, *os.File, erro
 	// we must first write the header files
 	headers, err := json.Marshal(fatbin)
 	if err != nil {
-		return rv, nil, err
+		return rv, err
 	}
 
 	f.Write(TOKEN_HEADER_START)
@@ -94,12 +99,34 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, *os.File, erro
 
 	// write each files
 	if err := write(fatbin, f); err != nil {
-		return fatbin, f, err
+		return fatbin, err
 	}
 
 	f.Write(TOKEN_DATA_END)
 
-	return rv, f, nil
+	// write into the target
+	// NOTE(remy): I don't use os.Rename because it has many
+	// limitations (e.g. no rename between partitions).
+	dst, err := os.Create(flags.Output)
+	if err != nil {
+		return rv, fmt.Errorf("Can't write the final archive: %s", err.Error())
+	}
+
+	// rewind the temp file
+	f.Seek(0, 0)
+
+	defer func() {
+		dst.Sync()
+		dst.Close()
+	}()
+
+	if _, err := io.Copy(dst, f); err != nil {
+		return rv, err
+	}
+
+	fmt.Printf("Archive created into : %s\n", flags.Output)
+
+	return rv, nil
 }
 
 func write(fatbin Fatbin, dst *os.File) error {
@@ -152,7 +179,6 @@ func createFatbinDirectories(fatbin Fatbin, dstDir string) error {
 
 func createDirectories(directory Directory, dstDir string) error {
 	for _, d := range directory.Directories {
-		println(d.Name)
 		if err := os.MkdirAll(dstDir+d.Name, 0755); err != nil {
 			return err
 		}
@@ -175,7 +201,7 @@ func extractFile(dstDir string, fileInfo FileInfo, data []byte) error {
 
 	defer file.Close()
 
-	fmt.Printf("Extracted %s\n", dstDir+fileInfo.Name)
+	//fmt.Printf("Extracted %s\n", dstDir+fileInfo.Name)
 
 	_, err = file.Write(data)
 	return err
