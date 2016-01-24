@@ -19,9 +19,9 @@ var flags Flags
 func parseFlags() error {
 	var dir, exe, out string
 
-	flag.StringVar(&dir, "dir", "", "the directory to fatbinerize")
-	flag.StringVar(&exe, "exe", "", "the file inside the fatbin archive to execute at startup")
-	flag.StringVar(&out, "out", "archive.fbin", "the archive file to create.")
+	flag.StringVar(&dir, "f.dir", "", "the directory to fatbinerize")
+	flag.StringVar(&exe, "f.exe", "", "the file inside the fatbin archive to execute at startup")
+	flag.StringVar(&out, "f.out", "archive.fbin", "the archive file to create.")
 
 	flag.Parse()
 
@@ -38,7 +38,7 @@ func parseFlags() error {
 		}
 
 		if len(exe) == 0 {
-			return fmt.Errorf("You must provide an executable when compressing a directory. See flag -exe.")
+			return fmt.Errorf("You must provide an executable when compressing a directory. See flag -f.exe.")
 		}
 
 		if len(out) == 0 {
