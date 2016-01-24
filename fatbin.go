@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type Fatbin struct {
@@ -273,6 +274,11 @@ func extractFile(dstDir string, fileInfo FileInfo, data []byte) error {
 	if len(dstDir) == 0 || dstDir == "/" {
 		return fmt.Errorf("Error in the dst dir: %s\n", dstDir)
 	}
+
+	if !strings.HasSuffix(dstDir, "/") {
+		dstDir += "/"
+	}
+
 	file, err := os.Create(dstDir + fileInfo.Name)
 	if err != nil {
 		return err
