@@ -198,6 +198,11 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, error) {
 		return rv, err
 	}
 
+	// set to executable
+	if err := os.Chmod(flags.Output, 0755); err != nil {
+		return rv, err
+	}
+
 	fmt.Printf("Archive created into : %s\n", flags.Output)
 
 	return rv, nil
