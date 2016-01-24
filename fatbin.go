@@ -273,7 +273,7 @@ func extractFile(dstDir string, fileInfo FileInfo, data []byte) error {
 	if len(dstDir) == 0 || dstDir == "/" {
 		return fmt.Errorf("Error in the dst dir: %s\n", dstDir)
 	}
-	file, err := os.Create(dstDir + fileInfo.Name)
+	file, err := os.Create(dstDir + "/" + fileInfo.Name)
 	if err != nil {
 		return err
 	}
