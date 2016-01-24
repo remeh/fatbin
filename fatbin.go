@@ -126,7 +126,12 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, error) {
 		return rv, fmt.Errorf("Can't write the final archive: %s", err.Error())
 	}
 
-	fbin, err := os.Open(os.Args[0])
+	original, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		return rv, err
+	}
+
+	fbin, err := os.Open(original)
 	if err != nil {
 		return rv, err
 	}
