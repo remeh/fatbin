@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -18,11 +19,11 @@ type Fatbin struct {
 	Directory  Directory `json:"dir"`
 }
 
+var dataSeparator = fmt.Sprintf("%s%s%s\n", "<", "fatbin", ">")
+
 // RunFatbin starts the given fatbin archive.
-func RunFatbin(filename string, args ...string) error {
-	if len(filename) == 0 {
-		return fmt.Errorf("Empty filename provided.")
-	}
+func RunFatbin(args ...string) error {
+	var err error
 
 	// create a tmp directory where everything will go
 	dir, err := ioutil.TempDir("", "fatbin")
@@ -30,11 +31,20 @@ func RunFatbin(filename string, args ...string) error {
 		return err
 	}
 
-	if fatbin, err := readFatbin(filename, dir); err != nil {
+	// we will write the whole data after <fatbin> into a tmp file
+	var archive string
+	if archive, err = extractData(os.Args[0]); err != nil {
+		return err
+	}
+
+	if fatbin, err := readFatbin(archive, dir); err != nil {
 		return err
 	} else {
 		defer func() {
 			if len(dir) > 0 && dir != "/" {
+				if err := os.Remove(archive); err != nil {
+					fmt.Println("Can't remove the temporary archive:", err.Error())
+				}
 				if err := os.RemoveAll(dir); err != nil {
 					fmt.Println("Can't remove the temporary dir:", err.Error())
 				}
@@ -52,6 +62,42 @@ func RunFatbin(filename string, args ...string) error {
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
 	}
+}
+
+// extractData extracts the binary archive from the binary executable.
+func extractData(filename string) (string, error) {
+	fbin, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
+
+	defer fbin.Close()
+
+	tmpArch, err := ioutil.TempFile("", "fatarch")
+	if err != nil {
+		return "", err
+	}
+
+	defer tmpArch.Close()
+
+	reader := bufio.NewReader(fbin)
+	for {
+		d, err := reader.ReadBytes('\n')
+		if err == io.EOF {
+			break
+		}
+
+		// found the data part, write it to a temporary archive.
+		if equals(d, []byte(dataSeparator)) {
+			if _, err := io.Copy(tmpArch, reader); err != nil {
+				return "", err
+			}
+
+			return tmpArch.Name(), nil
+		}
+	}
+
+	return "", fmt.Errorf("Can't find the data in the file.")
 }
 
 func readFatbin(filename, dstDir string) (Fatbin, error) {
@@ -73,7 +119,30 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, error) {
 		return rv, fmt.Errorf("Can't find the executable in the root directory.")
 	}
 
-	// open the target file
+	// first we copy the fatbin binary to a new file
+
+	dst, err := os.Create(flags.Output)
+	if err != nil {
+		return rv, fmt.Errorf("Can't write the final archive: %s", err.Error())
+	}
+
+	fbin, err := os.Open(os.Args[0])
+	if err != nil {
+		return rv, err
+	}
+
+	if _, err := io.Copy(dst, fbin); err != nil {
+		return rv, err
+	}
+
+	// write the separator
+	// NOTE(remy): I use Sprintf because otherwise <fatbin> appears in the sources
+	// and is parsed at runtime.
+	if _, err := dst.Write([]byte("\n" + dataSeparator)); err != nil {
+		return rv, err
+	}
+
+	// open the tmp file for the archive
 	f, err := ioutil.TempFile("", "fatbin")
 	if err != nil {
 		return rv, err
@@ -110,14 +179,6 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, error) {
 	gz.Write(TOKEN_DATA_END)
 	gz.Close()
 
-	// write into the target
-	// NOTE(remy): I don't use os.Rename because it has many
-	// limitations (e.g. no rename between partitions).
-	dst, err := os.Create(flags.Output)
-	if err != nil {
-		return rv, fmt.Errorf("Can't write the final archive: %s", err.Error())
-	}
-
 	// rewind the temp file
 	f.Seek(0, 0)
 
@@ -126,6 +187,8 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, error) {
 		dst.Close()
 	}()
 
+	// NOTE(remy): I don't use os.Rename because it has many
+	// limitations (e.g. no rename between partitions).
 	if _, err := io.Copy(dst, f); err != nil {
 		return rv, err
 	}

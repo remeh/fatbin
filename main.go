@@ -38,14 +38,7 @@ func main() {
 }
 
 func run() {
-	var run string
-	if len(os.Args) == 1 {
-		run = "archive.fbin"
-	} else if len(os.Args) > 1 {
-		run = os.Args[1]
-	}
-
-	if err := RunFatbin(run, os.Args[1:]...); err != nil {
+	if err := RunFatbin(os.Args[1:]...); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
