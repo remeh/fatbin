@@ -26,6 +26,5 @@ fatbin /path/to/an/archive/mehstation.fbin
 
 ## Future work
 
- * Gzip the archive.
- * Transmits argv and flags to the underlying app.
  * Ship only one executable file instead of fatbin+archive.
+ * Compress the archive with something else than gzip.
