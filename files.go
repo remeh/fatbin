@@ -1,3 +1,5 @@
+// Fatbin
+// Rémy Mathieu © 2016
 package main
 
 import (

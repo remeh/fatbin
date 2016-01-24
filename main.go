@@ -1,3 +1,5 @@
+// Fatbin
+// Rémy Mathieu © 2016
 package main
 
 import (
@@ -50,6 +52,4 @@ func build() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	// TODO(finish):
 }
