@@ -6,9 +6,19 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func main() {
+	// redefine the flags function
+	flag.Usage = func() {
+		// print defaults of fatbin only if it's named fatbin
+		if filepath.Base(os.Args[0]) == "fatbin" {
+			flag.PrintDefaults()
+			return
+		}
+	}
+
 	// read the flags
 
 	err := parseFlags()
@@ -35,7 +45,7 @@ func run() {
 		run = os.Args[1]
 	}
 
-	if err := RunFatbin(run); err != nil {
+	if err := RunFatbin(run, os.Args[1:]...); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

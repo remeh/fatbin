@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,7 +28,12 @@ func Parse(src *os.File, dstDir string) (Fatbin, error) {
 	var err error
 	var rv Fatbin
 
-	reader := bufio.NewReader(src)
+	gz, err := gzip.NewReader(src)
+	if err != nil {
+		return rv, err
+	}
+
+	reader := bufio.NewReader(gz)
 
 	// the very first line must be the TOKEN_HEADER_START
 

@@ -3,6 +3,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,7 +19,7 @@ type Fatbin struct {
 }
 
 // RunFatbin starts the given fatbin archive.
-func RunFatbin(filename string) error {
+func RunFatbin(filename string, args ...string) error {
 	if len(filename) == 0 {
 		return fmt.Errorf("Empty filename provided.")
 	}
@@ -45,7 +46,7 @@ func RunFatbin(filename string) error {
 		}
 
 		// execute the binary
-		cmd := exec.Command(dir + "/" + fatbin.Executable)
+		cmd := exec.Command(dir+"/"+fatbin.Executable, args...)
 		cmd.Dir = dir
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -78,6 +79,8 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, error) {
 		return rv, err
 	}
 
+	gz := gzip.NewWriter(f)
+
 	defer f.Close()
 
 	fatbin := Fatbin{
@@ -92,19 +95,20 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, error) {
 		return rv, err
 	}
 
-	f.Write(TOKEN_HEADER_START)
-	f.Write(headers)
-	f.Write([]byte("\n"))
-	f.Write(TOKEN_HEADER_END)
+	gz.Write(TOKEN_HEADER_START)
+	gz.Write(headers)
+	gz.Write([]byte("\n"))
+	gz.Write(TOKEN_HEADER_END)
 
-	f.Write(TOKEN_DATA_START)
+	gz.Write(TOKEN_DATA_START)
 
 	// write each files
-	if err := write(fatbin, f); err != nil {
+	if err := write(fatbin, gz); err != nil {
 		return fatbin, err
 	}
 
-	f.Write(TOKEN_DATA_END)
+	gz.Write(TOKEN_DATA_END)
+	gz.Close()
 
 	// write into the target
 	// NOTE(remy): I don't use os.Rename because it has many
@@ -131,11 +135,11 @@ func BuildFatbin(directory Directory, executable string) (Fatbin, error) {
 	return rv, nil
 }
 
-func write(fatbin Fatbin, dst *os.File) error {
+func write(fatbin Fatbin, dst io.Writer) error {
 	return writeDirectory(fatbin.Directory, dst)
 }
 
-func writeDirectory(dir Directory, dst *os.File) error {
+func writeDirectory(dir Directory, dst io.Writer) error {
 	for _, fi := range dir.Files {
 		if err := writeFile(fi, dst); err != nil {
 			return err
@@ -151,7 +155,7 @@ func writeDirectory(dir Directory, dst *os.File) error {
 	return nil
 }
 
-func writeFile(info FileInfo, dst *os.File) error {
+func writeFile(info FileInfo, dst io.Writer) error {
 	dst.Write(TOKEN_FILE_START)
 	dst.Write(TOKEN_FILE_HEADER_START)
 	data, err := json.Marshal(info)
