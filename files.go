@@ -77,7 +77,7 @@ func parseDirectory(path string) (Directory, error) {
 			subpath := fmt.Sprintf("%s%s", path, file.Name())
 			dir, err := parseDirectory(subpath)
 			if err != nil {
-				return rv, nil
+				return rv, err
 			}
 
 			rv.Directories[relative(dir.Name)] = dir
@@ -87,7 +87,6 @@ func parseDirectory(path string) (Directory, error) {
 			}
 		}
 	}
-	// TODO(remy): parse the sub-directories
 
 	return rv, nil
 }
